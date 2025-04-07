@@ -1,0 +1,13 @@
+Get client ID and client secret
+
+PayPal integrations use a client ID and client secret to authenticate API calls:
+
+    A client ID identifies an app. You only need a client ID to get a PayPal payment button and standard credit and debit card fields.
+    A client secret authenticates a client ID. To call PayPal APIs, you'll exchange your client ID and client secret for an access token. Keep this secret safe.
+
+Here's how to get your client ID and client secret:
+
+    Select Log in to Dashboard and log in or sign up.
+    Select Apps & Credentials.
+    New accounts come with a Default Application in the REST API apps section. To create a new project, select Create App.
+    Copy the client ID and client secret for your app.
