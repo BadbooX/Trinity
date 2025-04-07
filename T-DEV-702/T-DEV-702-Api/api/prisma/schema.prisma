@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// DEFINITION DES ROLES UTILISES POUR LA TABLE 'USER'
+enum Role {
+  ADMIN
+  CUSTOMER
+  VENDOR
+}
+
+model Address {
+  id         Int    @id @default(autoincrement())
+  country    String
+  city       String
+  postalCode Int
+  street     String
+  Userid     Int?
+  User       User?  @relation(fields: [Userid], references: [id])
+  Shop       Shop? // Correspond soit à un Shop
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  roles       Role[]    @default([CUSTOMER])
+  invoice     Invoice[]
+  address     Address[]
+  jwt         jwt[]
+  Shops       Shop[]
+}
+
+model Shop {
+  id          Int       @id @default(autoincrement())
+  idPaypal    String
+  name        String
+  phoneNumber String
+  email       String
+  products    Product[] // Peut contenir 0 produits au début
+  idAddress   Int       @unique // Relation avec la table 'ADRESS'
+  address     Address   @relation(fields: [idAddress], references: [id])
+  idUser      Int
+  User        User      @relation(fields: [idUser], references: [id])
+}
+
+model Product {
+  id             Int              @id @default(autoincrement())
+  barCode        String
+  name           String
+  price          Int
+  quantity       Int
+  invoiceProduct InvoiceProduct[]
+  idShop         Int // un produit appartient à exactement un Shop
+  Shop           Shop             @relation(fields: [idShop], references: [id])
+}
+
+model Invoice {
+  id             Int              @id @default(autoincrement())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  totalPrice     String
+  purchaseDate   DateTime         @default(now())
+  invoiceProduct InvoiceProduct[] // Une commande peut avoir plusieurs produits
+  idUser         Int
+  user           User             @relation(fields: [idUser], references: [id])
+}
+
+model InvoiceProduct {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  idInvoice Int
+  invoice   Invoice  @relation(fields: [idInvoice], references: [id])
+  idProduct Int
+  product   Product  @relation(fields: [idProduct], references: [id])
+}
+
+model jwt {
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  token     String
+  idUser    Int
+  user      User     @relation(fields: [idUser], references: [id])
+
+  @@id([idUser, token], name: "idUser_token")
+}

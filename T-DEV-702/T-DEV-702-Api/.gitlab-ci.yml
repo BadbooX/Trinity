@@ -1,0 +1,148 @@
+stages:
+  - prepare
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+
+##########
+
+default:
+  tags:
+    - shared
+
+##########
+
+# prepare-job:
+#   stage: prepare
+#   script:
+#     - echo "This job prepares the environment."
+
+############
+
+linter-test:
+  stage: test
+  image: node:20-alpine
+  script:
+    - echo "This job lints the vuejs app"
+    - cd ./front
+    - npm ci
+    - npm run lint
+
+############
+
+unit-test:
+  stage: test
+  image: node:20-alpine
+  script:
+    - echo "This job tests the fastify app"
+    # go to app folder
+    - cd ./api
+    # install dependencies
+    - npm ci
+    # execute tests
+    - node --test
+
+############
+
+e2e-test:
+  stage: test
+  image: cypress/browsers:node-22.11.0-chrome-130.0.6723.69-1-ff-132.0-edge-130.0.2849.56-1
+  script:
+    - echo "This job tests the fastify app"
+    - cd ./front
+    - npm ci
+    - npm run dev &
+    - npx cypress run --browser firefox
+  
+############
+
+build-job-api:
+  image: docker:27.3.1
+  services:
+    - docker:27.3.1-dind
+  before_script:
+    - docker info
+    # only on protected branches
+    # - if [[ "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then echo "$docker_login" | docker login -u $docker_user --password-stdin; fi
+    # - docker info
+  tags:
+    - docker
+    - shared
+  stage: build
+  script:
+    - cd ./api
+    - docker build -t mortifia/t-dev-702_api:$CI_COMMIT_SHA -f ./Dockerfile.prod .
+
+build-job-protected-api:
+  image: docker:27.3.1
+  services:
+    - docker:27.3.1-dind
+  before_script:
+    - docker info
+    # only on protected branches
+    - echo "$docker_login" | docker login -u $docker_user --password-stdin
+    - docker info
+  tags:
+    - docker
+    - shared
+  stage: build
+  needs: ["build-job-api"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_REF_PROTECTED == "true"
+  script:
+    - cd ./api
+    - docker build -t mortifia/t-dev-702_api:$CI_COMMIT_SHA -t mortifia/t-dev-702_api:latest -f ./Dockerfile.prod .
+    - docker push mortifia/t-dev-702_api:$CI_COMMIT_SHA
+    - docker push mortifia/t-dev-702_api:latest
+
+
+build-job-front:
+  image: docker:27.3.1
+  services:
+    - docker:27.3.1-dind
+  before_script:
+    - docker info
+    # only on protected branches
+    # - if [[ "$CI_COMMIT_REF_PROTECTED" == "true" ]]; then echo "$docker_login" | docker login -u $docker_user --password-stdin; fi
+    # - docker info
+  tags:
+    - docker
+    - shared
+  stage: build
+  script:
+    - cd ./front
+    - docker build -t mortifia/t-dev-702_front:$CI_COMMIT_SHA -f ./Dockerfile.prod .
+
+build-job-protected-front:
+  image: docker:27.3.1
+  services:
+    - docker:27.3.1-dind
+  before_script:
+    - docker info
+    # only on protected branches
+    - echo "$docker_login" | docker login -u $docker_user --password-stdin
+    - docker info
+  tags:
+    - docker
+    - shared
+  stage: build
+  needs: ["build-job-front"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_REF_PROTECTED == "true"
+  script:
+    - cd ./api
+    - docker build -t mortifia/t-dev-702_front:$CI_COMMIT_SHA -t mortifia/t-dev-702_front:latest -f ./Dockerfile.prod .
+    - docker images
+    - docker push mortifia/t-dev-702_front:$CI_COMMIT_SHA
+    - docker push mortifia/t-dev-702_front:latest
+
+# deploy-prod:
+#   stage: deploy
+#   script:
+#     - echo "This job deploys something from the $CI_COMMIT_BRANCH branch."
+#   environment: production
