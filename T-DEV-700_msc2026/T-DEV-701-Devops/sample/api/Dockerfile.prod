@@ -1,0 +1,16 @@
+# Back Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+
+# Installer les dépendances
+COPY package*.json ./
+RUN npm ci --production
+
+# Copier le code source
+COPY . ./
+
+# Exposer le port pour Fastify
+EXPOSE 3000
+
+# La commande CMD doit lancer le serveur Fastify
+CMD ["npm", "run", "start"]

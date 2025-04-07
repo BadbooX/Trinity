@@ -1,0 +1,18 @@
+services:
+  front:
+    build:
+      context: ./front        # Le dossier "front" pour Vue.js
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8080:80"             # port pour le front
+    restart: always
+
+  api:
+    build:
+      context: ./api          # le dossier "api" pour Fastify
+      dockerfile: Dockerfile.prod
+    ports:
+      - "3000:3000"           # port pour le back
+    restart: always
+    environment:
+      NODE_ENV: production    # définit l'environnement en production

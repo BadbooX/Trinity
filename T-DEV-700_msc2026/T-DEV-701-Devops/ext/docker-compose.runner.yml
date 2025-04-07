@@ -1,0 +1,17 @@
+volumes:
+  config:
+    driver: local
+  runner:
+    driver: local
+
+
+services:
+  gitlab-runner:
+    restart: unless-stopped
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    privileged: true
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - 'runner:/etc/gitlab-runner'
+      - 'config:/etc/gitlab'

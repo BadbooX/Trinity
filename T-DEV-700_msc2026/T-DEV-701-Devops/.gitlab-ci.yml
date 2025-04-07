@@ -1,0 +1,105 @@
+stages:
+  - prepare
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+
+##########
+
+default:
+  tags:
+    - shared
+
+##########
+
+prepare-job:
+  stage: prepare
+  script:
+    - echo "This job prepares the environment."
+
+############
+
+linter-test:
+  stage: test
+  image: node:20-alpine
+  script:
+    - echo "This job lints the vuejs app"
+    - cd ./sample/front
+    - npm ci
+    - npm run lint
+
+############
+
+unit-test:
+  stage: test
+  image: node:20-alpine
+  script:
+    - echo "This job tests the fastify app"
+    # go to app folder
+    - cd ./sample/api
+    # install dependencies
+    - npm ci
+    # execute tests
+    - node --test
+
+############
+
+e2e-test:
+  stage: test
+  image: cypress/browsers:node-22.11.0-chrome-130.0.6723.69-1-ff-132.0-edge-130.0.2849.56-1
+  script:
+    - echo "This job tests the fastify app"
+    - cd ./sample/front
+    - npm ci
+    - npm run dev &
+    - npx cypress run --browser firefox
+  
+############
+
+build-job:
+  image: docker:27.2.1
+  services:
+    - docker:27.2.1-dind
+  before_script:
+    - docker info
+    - echo "$docker_login" | docker login -u $docker_user --password-stdin
+    - docker info
+  tags:
+    - docker
+    - shared
+  # image: $CI_REGISTRY/ncy_1/t-dev-701-devops/docker:27.2.1
+  # services:
+  #   - name: $CI_REGISTRY/ncy_1/t-dev-701-devops/docker:27.2.1-dind
+  #     alias: docker
+  stage: build
+  # before_script:
+  #   - echo "FUUUUUUUUUUUUUUU"
+  #   - echo "$CI_REGISTRY"
+  #   - echo "$CI_REGISTRY_USER"
+  #   - echo "$CI_REGISTRY_PASSWORD"
+  #   - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY --username $CI_REGISTRY_USER --password-stdin
+  #   - docker info
+  script:
+    # - docker build -t t-dev.epitest.eu/ncy_1/t-dev-701-devops .
+    # - docker push t-dev.epitest.eu/ncy_1/t-dev-701-devops
+    - cd ./sample/api
+    - docker build -t 8dmortifia/t-dev-700_api:$CI_COMMIT_SHA -f ./Dockerfile.prod .
+    - docker push 8dmortifia/t-dev-700_api:$CI_COMMIT_SHA
+    
+    # - echo "$CI_DEPLOY_PASSWORD" | docker login $CI_REGISTRY -u $CI_DEPLOY_USER --password-stdin
+    # - docker build -t api:latest .
+    # - docker tag api:latest api:0
+    # - docker push api:latest
+    # - docker push api:0
+
+
+    ############
+
+deploy-prod:
+  stage: deploy
+  script:
+    - echo "This job deploys something from the $CI_COMMIT_BRANCH branch."
+  environment: production

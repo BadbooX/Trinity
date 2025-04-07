@@ -1,0 +1,20 @@
+# Définit l'image de base de développement dans le conteneur
+FROM node:20-alpine
+
+# Définit le dossier de travail dans le conteneur
+WORKDIR /app
+
+# Copie les fichiers json pour installer les dépendances dans le backEnd
+COPY package*.json ./
+
+# Installe les dépendances si non existantes dans le frontEnd
+RUN npm install
+
+# Copie le reste de l'appli
+COPY . .
+
+# Expose le port de l'application
+EXPOSE 8080
+
+# Lance l'application en mode dev comme définit dans le package.json
+CMD ["npm", "run", "host"]
