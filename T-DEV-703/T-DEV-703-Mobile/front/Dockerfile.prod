@@ -1,0 +1,26 @@
+# Étape 1 : Construire le front avec Vue CLI
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Installer les dépendances
+COPY package*.json ./
+RUN npm install
+
+# Copier les sources et construire le projet
+COPY . ./
+RUN npm run build
+
+# Étape 2 : Servir les fichiers avec Caddy
+FROM caddy:latest
+
+# Copier les fichiers de l'étape précédente
+COPY --from=build /app/dist /usr/share/caddy
+
+# Copier le fichier de configuration de Caddy
+COPY Caddyfile /etc/caddy/Caddyfile
+
+# Exposer le port 3000
+EXPOSE 3000
+
+# Démarrer Caddy
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]

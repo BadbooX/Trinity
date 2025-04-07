@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+model OrderShop {
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id])
+  shopId  Int
+  shop    Shop  @relation(fields: [shopId], references: [id])
+
+  shopcountry    String
+  shopcity       String
+  shoppostalCode Int
+  shopstreet     String
+
+  priceHT     Int @default(0)
+  priceTVA    Int @default(0)
+  priceTTC    Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status OrderStatus @default(PENDING)
+
+  @@id([orderId, shopId])
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// DEFINITION DES ROLES UTILISES POUR LA TABLE 'USER'
+enum Role {
+  ADMIN
+  CUSTOMER
+  VENDOR
+}
+
+model Address {
+  id         Int    @id @default(autoincrement())
+  country    String
+  city       String
+  postalCode Int
+  street     String
+  UserId     Int?
+  User       User?  @relation(fields: [UserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  Shop       Shop? // Correspond soit à un Shop
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  }
+
+model User {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  email       String   @unique
+  password    String
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  paypalId    String?
+
+  roles   Role[]    @default([CUSTOMER])
+  // invoice Invoice[]
+  address Address[]
+  jwt     jwt[]
+  Shops   Shop[]
+  Orders  Order[]   @relation(name: "user")
+
+  otherOrdersCreatedAsAdmin Order[] @relation(name: "admin")
+}
+
+model Shop {
+  id          Int       @id @default(autoincrement())
+  idPaypal    String
+  name        String
+  phoneNumber String
+  email       String
+  products    Product[] // Peut contenir 0 produits au début
+  idAddress   Int       @unique // Relation avec la table 'ADRESS'
+  address     Address   @relation(fields: [idAddress], references: [id])
+  idUser      Int?
+  User        User?     @relation(fields: [idUser], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  orders OrderShop[]
+  orderProduct orderProduct[]
+}
+
+model Product {
+  id             Int              @id @default(autoincrement())
+  barCode        String
+  name           String
+  priceHT        Int              @default(0)
+  priceTTC       Int              @default(0)
+  priceTVA       Int              @default(0)
+  stock          Int              @default(0)
+  // invoiceProduct InvoiceProduct[]
+  idShop         Int // un produit appartient à exactement un Shop
+  Shop           Shop             @relation(fields: [idShop], references: [id])
+
+  orderProduct orderProduct[]
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+
+  userId Int?
+  user   User? @relation(name: "user", fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  adminId Int?
+  admin   User? @relation(name: "admin", fields: [adminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  priceHT  Int
+  priceTVA Int
+  priceTTC Int
+
+  deliverycountry    String
+  deliverycity       String
+  deliverypostalCode Int
+  deliverystreet     String
+
+  billingcountry    String
+  billingcity       String
+  billingpostalCode Int
+  billingstreet     String
+
+  orderProducts orderProduct[]
+  OrderShops   OrderShop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status OrderStatus @default(PENDING)
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+  IN_TRANSIT
+  DELIVERED
+  PAID
+  REFUNDED
+}
+
+model orderProduct {
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  shopId    Int
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  name       String
+  barCode     String
+  priceHT     Int
+  priceTVA    Int
+  priceTTC    Int
+
+  priceTotalHT  Int
+  priceTotalTVA Int
+  priceTotalTTC Int
+
+  stock Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([orderId, productId])
+}
+
+// model Invoice {
+//   id             Int              @id @default(autoincrement())
+//   createdAt      DateTime         @default(now())
+//   updatedAt      DateTime         @updatedAt
+//   totalPrice     String
+//   purchaseDate   DateTime         @default(now())
+//   invoiceProduct InvoiceProduct[] // Une commande peut avoir plusieurs produits
+//   idUser         Int
+//   user           User             @relation(fields: [idUser], references: [id])
+// }
+
+// model InvoiceProduct {
+//   id        Int      @id @default(autoincrement())
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//   idInvoice Int
+//   invoice   Invoice  @relation(fields: [idInvoice], references: [id])
+//   idProduct Int
+//   product   Product  @relation(fields: [idProduct], references: [id])
+// }
+
+model jwt {
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  token     String
+  idUser    Int
+  user      User     @relation(fields: [idUser], references: [id])
+
+  @@id([idUser, token], name: "idUser_token")
+}
